@@ -1,8 +1,13 @@
+env:
+  global:
+    - secure: fzow+u2IeYwcp9STW8afOh+bZCSEenRUWkjBIMKxg/Cflut+ynStM6ZCk4GXyXoPguuw0+KCa/GmP89lOFYXNa6OgE5sfssXqyjz7s/+pdKA+/RHvLQPCm4lVtmtbpU6TaqtcGxMwqffdgDz0+WWNXbtpT9rKRsYirZDqWbjN+s=
 language: rust
 script:
   - cargo build --verbose
-  - cargo doc --no-deps --verbose
+  - cargo doc --verbose
   - mv target/doc doc
+after_script:
+  - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh
 notifications:
   email:
     on_success: change

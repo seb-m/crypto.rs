@@ -1,0 +1,13 @@
+[package]
+name = "crypto"
+version = "0.0.1"
+authors = ["Sebastien Martini <seb@dbzteam.org>"]
+
+[lib]
+name = "crypto"
+
+[dependencies.common]
+git = "https://github.com/seb-m/common.rs"
+
+[dependencies.curve41417]
+git = "https://github.com/seb-m/curve41417.rs"

@@ -1,0 +1,1 @@
+Adapted from https://github.com/gvanas/KeccakCodePackage - master trunk 04/15/2014

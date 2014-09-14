@@ -1,0 +1,12 @@
+language: rust
+script:
+  - cargo build --verbose
+  - cargo doc --no-deps --verbose
+  - mv target/doc doc
+notifications:
+  email:
+    on_success: change
+    on_failure: change
+os:
+  - linux
+  - osx

@@ -4,7 +4,7 @@ env:
 language: rust
 script:
   - cargo build --verbose
-  - cargo doc --verbose
+  - cargo doc --no-deps --verbose
   - mv target/doc doc
 after_script:
   - curl http://www.rust-ci.org/artifacts/put?t=$RUSTCI_TOKEN | sh

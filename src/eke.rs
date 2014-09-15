@@ -1,4 +1,4 @@
-//! Encrypted Key Exchange EKE
+//! Encrypted Key Exchange
 //!
 //! Implement a EKE variant close from
 //! [AuthA](http://grouper.ieee.org/groups/1363/passwdPK/contributions/autha.pdf)

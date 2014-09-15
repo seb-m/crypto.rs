@@ -1,4 +1,4 @@
-//! Key Derivation Function KDF
+//! Key Derivation Function
 
 use std::io::{Reader, IoResult, IoError, EndOfFile};
 use std::slice;

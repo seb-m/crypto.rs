@@ -16,8 +16,6 @@
 #[cfg(test)] extern crate debug;
 #[cfg(test)] #[phase(plugin, link)] extern crate log;
 
-extern crate alloc;
-extern crate libc;
 extern crate serialize;
 
 #[phase(plugin, link)]

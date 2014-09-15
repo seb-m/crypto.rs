@@ -364,7 +364,7 @@ pub fn decrypt<A: Allocator>(key: &SBuf<A, u8>, nonce: &[u8],
 }
 
 
-/// [Chacha20 AEAD](http://tools.ietf.org/html/draft-irtf-cfrg-chacha20-poly1305-01)
+/// [Chacha20-Poly1305 AEAD](http://tools.ietf.org/html/draft-irtf-cfrg-chacha20-poly1305-01)
 pub struct ChachaAead<A = DefaultAllocator> {
     key: SBuf<A, u8>
 }

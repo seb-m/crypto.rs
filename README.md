@@ -12,7 +12,8 @@ Currently implemented:
 * [Curve41417](http://safecurves.cr.yp.to/)
 * [Chacha20](http://cr.yp.to/chacha.html)
 * [Poly1305](http://cr.yp.to/mac.html)
-* [Sha3](http://csrc.nist.gov/groups/ST/hash/sha-3/sha-3_standardization.html) (draft fips 202)
+* [Chacha20-Poly1305 AEAD](http://tools.ietf.org/html/draft-irtf-cfrg-chacha20-poly1305-01)
+* [Sha3](http://csrc.nist.gov/groups/ST/hash/sha-3/sha-3_standardization.html) (Draft FIPS 202) and [XKdf](http://csrc.nist.gov/groups/ST/hash/sha-3/Aug2014/documents/perlner_kmac.pdf)
 
 
 ## Building from source

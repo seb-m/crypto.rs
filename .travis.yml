@@ -1,6 +1,6 @@
 env:
   global:
-    - secure: fzow+u2IeYwcp9STW8afOh+bZCSEenRUWkjBIMKxg/Cflut+ynStM6ZCk4GXyXoPguuw0+KCa/GmP89lOFYXNa6OgE5sfssXqyjz7s/+pdKA+/RHvLQPCm4lVtmtbpU6TaqtcGxMwqffdgDz0+WWNXbtpT9rKRsYirZDqWbjN+s=
+    - secure: aWdvcHWDLIxOCD4h95KqYfe6j6RkNPY0x5aKMFMkas//ZWqo2R5SBSSV48MMC3gckfPUz7iP4+bzvzBcxIoppSK/iMNLn3snkl3uLDVEduQnpDblXfmqZrN8TajDnQOiroojqAfpmjFTUfI3b+EIilm/zr7aYdgEq4zBiNr4EG8=
 language: rust
 script:
   - cargo build --verbose

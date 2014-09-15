@@ -24,6 +24,7 @@ extern crate "curve41417" as crv_curve41417;
 
 // Reexport modules
 pub use common::sbuf;
+pub use common::utils;
 
 /// [Curve41417](http://safecurves.cr.yp.to/) elliptic curve
 pub mod curve41417 {

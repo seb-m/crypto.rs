@@ -105,7 +105,7 @@ fn keccak_f<A: Allocator>(state: &mut SBuf<A, u8>) {
     }
 
     for i in range(0u, s.len()) {
-        utils::u64to8_le(state.mut_slice(i * 8, (i + 1) * 8), s.get(i));
+        utils::u64to8_le(state.slice_mut(i * 8, (i + 1) * 8), s.get(i));
     }
 }
 
@@ -451,7 +451,7 @@ pub fn hash<A: Allocator = DefaultAllocator>(mode: Sha3Mode, input: &[u8],
 mod tests {
     use serialize::hex::FromHex;
     use std::io::{BufferedReader, File};
-    use std::path::posix::Path;
+    use std::io::fs::PathExtensions;
     use std::os;
     use std::rand::{task_rng, Rng};
     use test::Bencher;
@@ -592,7 +592,7 @@ mod tests {
         let mut out2: Vec<u8> = Vec::from_elem(size, 0);
         while pos < size {
             pos = task_rng().gen_range(pos, size + 1);
-            assert!(state.read(out2.mut_slice(old_pos, pos)).is_ok());
+            assert!(state.read(out2.slice_mut(old_pos, pos)).is_ok());
             old_pos = pos;
         }
 

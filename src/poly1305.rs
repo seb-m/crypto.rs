@@ -18,7 +18,7 @@ fn add<A: Allocator>(s: &mut SBuf<A, u32>, c: &[u8]) {
     assert!(s.len() == 17 && c.len() <= 17);
     let mut u: u32 = 0;
 
-    for (its, itc) in s.mut_iter().zip(c.iter().chain(trail.iter())) {
+    for (its, itc) in s.iter_mut().zip(c.iter().chain(trail.iter())) {
         u += *its + *itc as u32;
         *its = u & 0xff;
         u >>= 8;
@@ -128,7 +128,7 @@ impl<A: Allocator> Poly1305<A> {
         dkey[14] = key[14];
         dkey[15] = key[15] & 15;
 
-        slice::bytes::copy_memory(dkey.mut_slice_from(17), key.slice_from(16));
+        slice::bytes::copy_memory(dkey.slice_from_mut(17), key.slice_from(16));
 
         Ok(Poly1305 {
             key: dkey,
@@ -199,7 +199,7 @@ impl<A: Allocator> Writer for Poly1305<A> {
 
         // Complete existing partial chunk.
         if self.pos > 0 && in_len >= n {
-            slice::bytes::copy_memory(self.partial.mut_slice_from(self.pos),
+            slice::bytes::copy_memory(self.partial.slice_from_mut(self.pos),
                                       buf.slice_to(n));
             write_block(&mut self.state, self.partial.as_slice(),
                         self.key.slice_to(17));
@@ -216,7 +216,7 @@ impl<A: Allocator> Writer for Poly1305<A> {
 
         // Store partial remaining chunk.
         if in_pos != in_len {
-            slice::bytes::copy_memory(self.partial.mut_slice_from(self.pos),
+            slice::bytes::copy_memory(self.partial.slice_from_mut(self.pos),
                                       buf.slice_from(in_pos));
             self.pos += in_len - in_pos;
         }

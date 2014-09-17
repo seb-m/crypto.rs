@@ -57,7 +57,7 @@ fn salsa20_word_to_byte<A: Allocator>(buf: &mut [u8],
 
     for i in range(0u, x.len()) {
         x[i] = x[i] + input[i];
-        utils::u32to8_le(buf.mut_slice(i * 4, (i + 1) * 4), &x[i]);
+        utils::u32to8_le(buf.slice_mut(i * 4, (i + 1) * 4), &x[i]);
     }
 }
 
@@ -166,7 +166,7 @@ impl<A: Allocator> Reader for ChachaRaw<A> {
                 });
             }
 
-            let bufr = buf.mut_slice(pos, pos + BLOCK_SIZE);
+            let bufr = buf.slice_mut(pos, pos + BLOCK_SIZE);
             salsa20_word_to_byte(bufr, &self.input);
 
             len -= BLOCK_SIZE;
@@ -261,7 +261,7 @@ impl<A: Allocator> CipherEncrypt for ChachaStream<A> {
                 detail: None
             });
         }
-        for (i, o) in input.iter().zip(output.mut_iter()) {
+        for (i, o) in input.iter().zip(output.iter_mut()) {
             *o = *i ^ *try!(self.read_byte_ref());
         }
         Ok(input.len())
@@ -291,7 +291,7 @@ impl<A: Allocator> Reader for ChachaStream<A> {
             let nread = {
                 let available = try!(self.fill_buf());
                 let nread = cmp::min(available.len(), buf.len() - pos);
-                slice::bytes::copy_memory(buf.mut_slice_from(pos),
+                slice::bytes::copy_memory(buf.slice_from_mut(pos),
                                           available.slice_to(nread));
                 nread
             };
@@ -395,14 +395,14 @@ impl<A: Allocator> ChachaAead<A> {
             Some(data) => {
                 try_ok_unit!(data.hash(&mut poly));
                 try_ok_unit!(utils::pad16(data.len()).hash(&mut poly));
-                utils::u64to8_le(lens_enc.mut_slice_to(u64::BYTES),
+                utils::u64to8_le(lens_enc.slice_to_mut(u64::BYTES),
                                  &(data.len() as u64));
             },
             None => ()
         }
         try_ok_unit!(ciphertext.hash(&mut poly));
         try_ok_unit!(utils::pad16(ciphertext.len()).hash(&mut poly));
-        utils::u64to8_le(lens_enc.mut_slice_from(u64::BYTES),
+        utils::u64to8_le(lens_enc.slice_from_mut(u64::BYTES),
                          &(ciphertext.len() as u64));
         try_ok_unit!(lens_enc.as_slice().hash(&mut poly));
         try_ok_unit!(poly.tag(tag));
@@ -434,11 +434,11 @@ impl<A: Allocator> ChachaAead<A> {
 
         // Encrypt plaintext.
         try_ok_unit!(plaintext.encrypt(&mut chacha,
-                                       out.mut_slice_from(poly1305::TAG_SIZE)));
+                                       out.slice_from_mut(poly1305::TAG_SIZE)));
 
         // Compute one-time authenticator.
         {
-            let (tag, cyphertext) = out.mut_split_at(poly1305::TAG_SIZE);
+            let (tag, cyphertext) = out.split_at_mut(poly1305::TAG_SIZE);
             try!(self.authenticator(&mac_key, aad, cyphertext, tag));
         }
 

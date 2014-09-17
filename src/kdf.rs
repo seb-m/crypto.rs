@@ -19,7 +19,7 @@ fn key_pack<A: Allocator>(key: &[u8], l: uint) -> Result<SBuf<A, u8>, ()> {
 
     let mut kp: SBuf<A, u8> = SBuf::new_zero(l / 8);
     kp[0] = (l / 8) as u8;
-    slice::bytes::copy_memory(kp.mut_slice_from(1), key);
+    slice::bytes::copy_memory(kp.slice_from_mut(1), key);
     kp[key.len() + 1] = 0x01;
     Ok(kp)
 }
@@ -105,7 +105,7 @@ impl<A: Allocator> Reader for XKdf<A> {
         let mut nread = try!(self.shake.read(buf));
         let left = self.size - self.pos;
         if nread > left {
-            utils::zero_memory(buf.mut_slice_from(left));
+            utils::zero_memory(buf.slice_from_mut(left));
             nread = left;
         }
 

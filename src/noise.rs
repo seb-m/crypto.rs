@@ -168,17 +168,17 @@ impl<A: Allocator> NoiseSuite<A> for Noise414<A> {
             let mut pad = SBuf::<A, u8>::new_zero(padlen + u32::BYTES);
             if padlen > 0 {
                 let rng = &mut utils::urandom_rng();
-                rng.fill_bytes(pad.mut_slice_to(padlen));
+                rng.fill_bytes(pad.slice_to_mut(padlen));
             }
-            utils::u32to8_le(pad.mut_slice_from(padlen),
+            utils::u32to8_le(pad.slice_from_mut(padlen),
                              &(try_some_err!(padlen.to_u32())));
             try_ok_unit!(pad.as_slice().encrypt(
-                &mut chacha, output.mut_slice_from(plaintext.len())));
+                &mut chacha, output.slice_from_mut(plaintext.len())));
         }
 
         // Authenticate fields.
         {
-            let (ciphertext, tag) = output.mut_split_at(enc_len);
+            let (ciphertext, tag) = output.split_at_mut(enc_len);
             try_ok_unit!(self.authenticate(ciphertext, authtext,
                                            &mac_key, tag));
         }
@@ -293,9 +293,9 @@ impl<A: Allocator> Noise414<A> {
         try_ok_unit!(utils::pad16(ciphertext.len()).hash(&mut poly));
 
         let mut le_buf = SBuf::<A, u8>::new_zero(u64::BYTES * 2);
-        utils::u64to8_le(le_buf.mut_slice_to(u64::BYTES),
+        utils::u64to8_le(le_buf.slice_to_mut(u64::BYTES),
                          &(authtext_len as u64));
-        utils::u64to8_le(le_buf.mut_slice_from(u64::BYTES),
+        utils::u64to8_le(le_buf.slice_from_mut(u64::BYTES),
                          &(ciphertext.len() as u64));
         try_ok_unit!(le_buf.as_slice().hash(&mut poly));
 
@@ -483,7 +483,7 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
         // Encrypt header.
         let nonce_idx = suite.key_size();
         let hdr_enc = {
-            let (hdr_key, hdr_nonce) = kdf1.mut_split_at(nonce_idx);
+            let (hdr_key, hdr_nonce) = kdf1.split_at_mut(nonce_idx);
             let mut hdr: Blob<T, A> = Blob::new();
             hdr.set_context(hdr_key, hdr_nonce.slice_to(suite.nonce_size()));
             try_ok_unit!(hdr.seal(header_pad_len, sender_pubkey, authtext))
@@ -491,7 +491,7 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
 
         // Encrypt body.
         let bdy_enc = {
-            let (bdy_key, bdy_nonce) = kdf2.mut_split_at(nonce_idx);
+            let (bdy_key, bdy_nonce) = kdf2.split_at_mut(nonce_idx);
             let bdy_add: SBuf<A, u8> = if authtext.is_some() {
                 SBuf::from_slices(&[*authtext.as_ref().unwrap(),
                                     hdr_enc.as_slice()])
@@ -570,7 +570,7 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
         let nonce_idx = suite.key_size();
         let cv_idx = suite.cc_size();
         let sender_pubkey = {
-            let (hdr_key, hdr_nonce) = kdf1.mut_split_at(nonce_idx);
+            let (hdr_key, hdr_nonce) = kdf1.split_at_mut(nonce_idx);
             let mut hdr: Blob<T, A> = Blob::new();
             hdr.set_context(hdr_key, hdr_nonce.slice_to(suite.nonce_size()));
             try_ok_unit!(hdr.open(hdr_enc, authtext))
@@ -589,7 +589,7 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
 
         // Decrypt data.
         let bdy_dec = {
-            let (bdy_key, bdy_nonce) = kdf2.mut_split_at(nonce_idx);
+            let (bdy_key, bdy_nonce) = kdf2.split_at_mut(nonce_idx);
             let bdy_add: SBuf<A, u8> = if authtext.is_some() {
                 SBuf::from_slices(&[*authtext.as_ref().unwrap(), hdr_enc])
             } else {

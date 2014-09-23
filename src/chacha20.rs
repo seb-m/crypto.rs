@@ -689,7 +689,7 @@ mod tests {
         let mut ks2: Vec<u8> = Vec::from_elem(size, 0);
         while pos < size {
             pos = task_rng().gen_range(pos, size + 1);
-            assert!(stream.read(ks2.mut_slice(old_pos, pos)).is_ok());
+            assert!(stream.read(ks2.slice_mut(old_pos, pos)).is_ok());
             old_pos = pos;
         }
 

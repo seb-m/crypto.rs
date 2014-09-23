@@ -284,7 +284,7 @@ impl<A: Allocator> Noise414<A> {
 
         let mut authtext_len = 0;
         if authtext.is_some() {
-            try_ok_unit!(authtext.get_ref().hash(&mut poly));
+            try_ok_unit!(authtext.as_ref().unwrap().hash(&mut poly));
             authtext_len = authtext.as_ref().unwrap().len();
             try_ok_unit!(utils::pad16(authtext_len).hash(&mut poly));
         }

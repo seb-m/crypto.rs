@@ -67,7 +67,7 @@ fn keccak_f<A: Allocator>(state: &mut SBuf<A, u8>) {
     let mut c: SBuf<A, u64> = SBuf::new_zero(5);
 
     for i in iter::range_step(0u, state.len(), 8) {
-        utils::u8to64_le(s.get_mut(i / 8), state.slice(i, i + 8));
+        utils::u8to64_le(s.get_mut(i / 8), state[mut i..i + 8]);
     }
 
     for round in range(0u, NROUNDS) {
@@ -105,7 +105,7 @@ fn keccak_f<A: Allocator>(state: &mut SBuf<A, u8>) {
     }
 
     for i in range(0u, s.len()) {
-        utils::u64to8_le(state.slice_mut(i * 8, (i + 1) * 8), s.get(i));
+        utils::u64to8_le(state[mut i * 8..(i + 1) * 8], s.get(i));
     }
 }
 
@@ -269,10 +269,10 @@ impl<A: Allocator> Sha3<A> {
         let p_len = pad_len(ds_len, self.offset * 8, self.rate() * 8);
 
         let mut p: Vec<u8> = Vec::from_elem(p_len, 0);
-        set_domain_sep(self.digest_length(), p.as_mut_slice());
-        set_pad(ds_len, p.as_mut_slice());
+        set_domain_sep(self.digest_length(), p[mut]);
+        set_pad(ds_len, p[mut]);
 
-        try!(self.write(p.as_slice()));
+        try!(self.write(p[]));
         self.can_absorb = false;
         Ok(())
     }
@@ -285,7 +285,7 @@ impl<A: Allocator> Sha3<A> {
     /// number of bytes discarded.
     pub fn skip(&mut self, n: uint) -> IoResult<uint> {
         let mut s: SBuf<A, u8> = SBuf::new_zero(n);
-        self.read(s.as_mut_slice())
+        self.read(s[mut])
     }
 }
 
@@ -497,34 +497,34 @@ mod tests {
             loop {
                 match lines.next() {
                     Some(Ok(ref msg_line))
-                        if msg_line.as_slice().starts_with("Msg =") => {
+                        if msg_line[].starts_with("Msg =") => {
 
-                        let msg_hex = msg_line.as_slice().slice_from(6);
+                        let msg_hex = msg_line[][6..];
                         msg = msg_hex.from_hex().unwrap();
                     },
                     Some(Ok(ref hash_line))
-                        if hash_line.as_slice().starts_with("MD =") => {
+                        if hash_line[].starts_with("MD =") => {
                         count += 1;
 
-                        let hash_hex = hash_line.as_slice().slice_from(5);
+                        let hash_hex = hash_line[][5..];
                         let hasher: Sha3Hasher<DefaultAllocator> =
                             Sha3Hasher::new(mode);
                         let mut out: Vec<u8> =
                             Vec::from_elem(Sha3Mode::digest_length(mode), 0);
-                        let r = hasher.hash(&msg, out.as_mut_slice());
+                        let r = hasher.hash(&msg, out[mut]);
                         assert!(r.ok().unwrap() == out.len());
                         assert!(hash_hex.from_hex().unwrap() == out);
                     },
                     Some(Ok(ref hash_line))
-                        if hash_line.as_slice().starts_with("Squeezed =") => {
+                        if hash_line[].starts_with("Squeezed =") => {
                         count += 1;
 
-                        let hash_hex = hash_line.as_slice().slice_from(11);
+                        let hash_hex = hash_line[][11..];
                         let hasher: Sha3Hasher<DefaultAllocator> =
                             Sha3Hasher::new(mode);
                         let mut out: Vec<u8> =
                             Vec::from_elem(hash_hex.len() / 2, 0);
-                        let r = hasher.hash(&msg, out.as_mut_slice());
+                        let r = hasher.hash(&msg, out[mut]);
                         assert!(r.ok().unwrap() == out.len());
                         assert!(hash_hex.from_hex().unwrap() == out);
                     },
@@ -543,13 +543,13 @@ mod tests {
         let mode = Sha3_256;
 
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
 
         // One chunk
         let hasher1: Sha3Hasher<DefaultAllocator> = Sha3Hasher::new(mode);
         let mut out1: Vec<u8> =
             Vec::from_elem(Sha3Mode::digest_length(mode), 0);
-        let ret1 = hasher1.hash(&input, out1.as_mut_slice());
+        let ret1 = hasher1.hash(&input, out1[mut]);
         assert!(ret1.ok().unwrap() == out1.len());
 
         // Multiple chunks
@@ -558,12 +558,12 @@ mod tests {
         let mut state: Sha3<DefaultAllocator> = Sha3::new(mode);
         while pos < size {
             pos = task_rng().gen_range(pos, size + 1);
-            assert!(state.write(input.slice(old_pos, pos)).is_ok());
+            assert!(state.write(input[old_pos..pos]).is_ok());
             old_pos = pos;
         }
         let mut out2: Vec<u8> =
             Vec::from_elem(Sha3Mode::digest_length(mode), 0);
-        let ret2 = state.read(out2.as_mut_slice());
+        let ret2 = state.read(out2[mut]);
         assert!(ret2.ok().unwrap() == out2.len());
 
         // Compare digests
@@ -576,23 +576,23 @@ mod tests {
         let mode = Shake128;
 
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
 
         // One chunk
         let hasher1: Sha3Hasher<DefaultAllocator> = Sha3Hasher::new(mode);
         let mut out1: Vec<u8> = Vec::from_elem(size, 0);
-        let ret1 = hasher1.hash(&input, out1.as_mut_slice());
+        let ret1 = hasher1.hash(&input, out1[mut]);
         assert!(ret1.ok().unwrap() == out1.len());
 
         // Multiple chunks
         let mut old_pos = 0u;
         let mut pos = 0u;
         let mut state: Sha3<DefaultAllocator> = Sha3::new(mode);
-        assert!(state.write(input.as_slice()).is_ok());
+        assert!(state.write(input[]).is_ok());
         let mut out2: Vec<u8> = Vec::from_elem(size, 0);
         while pos < size {
             pos = task_rng().gen_range(pos, size + 1);
-            assert!(state.read(out2.slice_mut(old_pos, pos)).is_ok());
+            assert!(state.read(out2[mut old_pos..pos]).is_ok());
             old_pos = pos;
         }
 
@@ -606,16 +606,15 @@ mod tests {
         let mode = Shake128;
 
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
 
         let hasher: Sha3Hasher<DefaultAllocator> = Sha3Hasher::new(mode);
         let mut out1: Vec<u8> = Vec::from_elem(size, 0);
-        let mut ret = hasher.hash(&input, out1.as_mut_slice());
+        let mut ret = hasher.hash(&input, out1[mut]);
         assert!(ret.ok().unwrap() == out1.len());
 
         let mut out2: Vec<u8> = Vec::from_elem(size, 0);
-        ret = hash::<DefaultAllocator>(mode, input.as_slice(),
-                                       out2.as_mut_slice());
+        ret = hash::<DefaultAllocator>(mode, input[], out2[mut]);
         assert!(ret.ok().unwrap() == out2.len());
 
         assert!(out1 == out2);
@@ -628,14 +627,14 @@ mod tests {
         let mode = Sha3_512;
 
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
         let mut state: Sha3<DefaultAllocator> = Sha3::new(mode);
         let mut out: Vec<u8> =
             Vec::from_elem(Sha3Mode::digest_length(mode), 0);
 
         b.iter(|| {
             input.hash(&mut state);
-            state.read(out.as_mut_slice());
+            state.read(out[mut]);
         })
     }
 }

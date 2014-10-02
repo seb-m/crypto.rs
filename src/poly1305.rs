@@ -128,7 +128,7 @@ impl<A: Allocator> Poly1305<A> {
         dkey[14] = key[14];
         dkey[15] = key[15] & 15;
 
-        slice::bytes::copy_memory(dkey.slice_from_mut(17), key.slice_from(16));
+        slice::bytes::copy_memory(dkey[mut 17..], key[16..]);
 
         Ok(Poly1305 {
             key: dkey,
@@ -156,12 +156,12 @@ impl<A: Allocator> Poly1305<A> {
         }
 
         if self.pos > 0 {
-            write_block(&mut self.state, self.partial.slice_to(self.pos),
-                        self.key.slice_to(17));
+            write_block(&mut self.state, self.partial[..self.pos],
+                        self.key[..17]);
         }
 
         freeze(&mut self.state);
-        add(&mut self.state, self.key.slice_from(17));
+        add(&mut self.state, self.key[17..]);
         for i in range(0u, TAG_SIZE) {
             *output.get_mut(i).unwrap() = self.state[i] as u8;
         }
@@ -175,7 +175,7 @@ impl<A: Allocator> Poly1305<A> {
     /// buffer.
     pub fn tag_to_sbuf(&mut self) -> IoResult<SBuf<A, u8>> {
         let mut s: SBuf<A, u8> = SBuf::new_zero(TAG_SIZE);
-        try!(self.tag(s.as_mut_slice()));
+        try!(self.tag(s[mut]));
         Ok(s)
     }
 }
@@ -199,25 +199,23 @@ impl<A: Allocator> Writer for Poly1305<A> {
 
         // Complete existing partial chunk.
         if self.pos > 0 && in_len >= n {
-            slice::bytes::copy_memory(self.partial.slice_from_mut(self.pos),
-                                      buf.slice_to(n));
-            write_block(&mut self.state, self.partial.as_slice(),
-                        self.key.slice_to(17));
+            slice::bytes::copy_memory(self.partial[mut self.pos..], buf[..n]);
+            write_block(&mut self.state, self.partial[], self.key[..17]);
             self.pos = 0;
             in_pos += n;
         }
 
         // Process full chunks.
         while in_pos + 16 <= in_len {
-            write_block(&mut self.state, buf.slice(in_pos, in_pos + 16),
-                        self.key.slice_to(17));
+            write_block(&mut self.state, buf[in_pos..in_pos + 16],
+                        self.key[..17]);
             in_pos += 16;
         }
 
         // Store partial remaining chunk.
         if in_pos != in_len {
-            slice::bytes::copy_memory(self.partial.slice_from_mut(self.pos),
-                                      buf.slice_from(in_pos));
+            slice::bytes::copy_memory(self.partial[mut self.pos..],
+                                      buf[in_pos..]);
             self.pos += in_len - in_pos;
         }
 
@@ -321,14 +319,14 @@ mod tests {
 
         for i in iter::range_step(0, vectors.len(), 3) {
             let key: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i].from_hex().unwrap().as_slice());
+                vectors[i].from_hex().unwrap()[]);
             assert!(key.len() == KEY_SIZE);
 
             let v1 = vectors[i + 1].from_hex().unwrap();
-            let input = v1.as_slice();
+            let input = v1[];
 
             let v2 = vectors[i + 2].from_hex().unwrap();
-            let tag1 = v2.as_slice();
+            let tag1 = v2[];
             assert!(tag1.len() == TAG_SIZE);
             let mut tag2: Vec<u8> = Vec::from_elem(TAG_SIZE, 0);
 
@@ -336,8 +334,8 @@ mod tests {
                 Poly1305::new(&key).unwrap();
             assert!(p.write(input).is_ok());
 
-            assert!(p.tag(tag2.as_mut_slice()).ok().unwrap() == TAG_SIZE);
-            assert!(tag1 == tag2.as_slice());
+            assert!(p.tag(tag2[mut]).ok().unwrap() == TAG_SIZE);
+            assert!(tag1 == tag2[]);
         }
     }
 
@@ -347,14 +345,14 @@ mod tests {
 
         let key: SBuf<DefaultAllocator, u8> = SBuf::new_rand(KEY_SIZE);
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
 
         // One chunk
         let mut poly1: Poly1305<DefaultAllocator> =
             Poly1305::new(&key).unwrap();
         let mut out1: Vec<u8> = Vec::from_elem(TAG_SIZE, 0);
-        assert!(poly1.write(input.as_slice()).is_ok());
-        let ret1 = poly1.tag(out1.as_mut_slice());
+        assert!(poly1.write(input[]).is_ok());
+        let ret1 = poly1.tag(out1[mut]);
         assert!(ret1.ok().unwrap() == out1.len());
 
         // Multiple chunks
@@ -364,11 +362,11 @@ mod tests {
             Poly1305::new(&key).unwrap();
         while pos < size {
             pos = task_rng().gen_range(pos, size + 1);
-            assert!(poly2.write(input.slice(old_pos, pos)).is_ok());
+            assert!(poly2.write(input[old_pos..pos]).is_ok());
             old_pos = pos;
         }
         let mut out2: Vec<u8> = Vec::from_elem(TAG_SIZE, 0);
-        let ret2 = poly2.tag(out2.as_mut_slice());
+        let ret2 = poly2.tag(out2[mut]);
         assert!(ret2.ok().unwrap() == out2.len());
 
         // Compare tags
@@ -381,13 +379,13 @@ mod tests {
         let size = 8192u;
         let key: SBuf<DefaultAllocator, u8> = SBuf::new_rand(KEY_SIZE);
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
         let mut tag: Vec<u8> = Vec::from_elem(TAG_SIZE, 0);
 
         b.iter(|| {
             let mut poly = Poly1305::new(&key).unwrap();
-            poly.write(input.as_slice());
-            poly.tag(tag.as_mut_slice());
+            poly.write(input[]);
+            poly.tag(tag[mut]);
         })
     }
 }

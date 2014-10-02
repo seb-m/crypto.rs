@@ -31,7 +31,7 @@ impl<'a, S: Writer> Hash<S> for &'a str {
 
 impl<S: Writer> Hash<S> for Vec<u8> {
     fn hash(&self, state: &mut S) -> IoResult<()> {
-        state.write(self.as_slice())
+        state.write(self[])
     }
 }
 

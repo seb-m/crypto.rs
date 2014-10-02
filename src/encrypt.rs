@@ -37,7 +37,7 @@ impl<'a, S: CipherEncrypt> Encrypt<S> for &'a str {
 
 impl<S: CipherEncrypt> Encrypt<S> for Vec<u8> {
     fn encrypt(&self, stream: &mut S, output: &mut [u8]) -> IoResult<uint> {
-        stream.encrypt(self.as_slice(), output)
+        stream.encrypt(self[], output)
     }
 }
 

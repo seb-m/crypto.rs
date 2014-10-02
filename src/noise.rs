@@ -128,7 +128,7 @@ impl<A: Allocator> NoiseSuite<A> for Noise414<A> {
            output: &mut [u8]) -> Result<uint, ()> {
         // fixme: separate kdf_num to context?
         let key = SBuf::<A, u8>::from_slices(&[secret, extra_secret]);
-        let mut xkdf = try!(XKdf::<A>::new(Shake256, key.as_slice(), info,
+        let mut xkdf = try!(XKdf::<A>::new(Shake256, key[], info,
                                            None, output.len()));
         Ok(try_ok_unit!(xkdf.read(output)))
     }
@@ -153,14 +153,14 @@ impl<A: Allocator> NoiseSuite<A> for Noise414<A> {
 
         // Generate mac key.
         let mut mac_key = SBuf::<A, u8>::new_zero(poly1305::KEY_SIZE);
-        try_ok_unit!(chacha.read(mac_key.as_mut_slice()));
+        try_ok_unit!(chacha.read(mac_key[mut]));
 
         // Discard first block's remaining bytes.
         assert!(chacha20::BLOCK_SIZE >= poly1305::KEY_SIZE);
         try_ok_unit!(chacha.skip(chacha20::BLOCK_SIZE - poly1305::KEY_SIZE));
 
         // Encrypt plaintext.
-        try_ok_unit!(plaintext.encrypt(&mut chacha, output.as_mut_slice()));
+        try_ok_unit!(plaintext.encrypt(&mut chacha, output[mut]));
 
         // Optionally encrypt random padding.
         if pad_len.is_some() {
@@ -168,12 +168,11 @@ impl<A: Allocator> NoiseSuite<A> for Noise414<A> {
             let mut pad = SBuf::<A, u8>::new_zero(padlen + u32::BYTES);
             if padlen > 0 {
                 let rng = &mut utils::urandom_rng();
-                rng.fill_bytes(pad.slice_to_mut(padlen));
+                rng.fill_bytes(pad[mut ..padlen]);
             }
-            utils::u32to8_le(pad.slice_from_mut(padlen),
-                             &(try_some_err!(padlen.to_u32())));
-            try_ok_unit!(pad.as_slice().encrypt(
-                &mut chacha, output.slice_from_mut(plaintext.len())));
+            utils::u32to8_le(pad[mut padlen..], &(try_some_err!(padlen.to_u32())));
+            try_ok_unit!(pad[].encrypt(&mut chacha,
+                                       output[mut plaintext.len()..]));
         }
 
         // Authenticate fields.
@@ -213,15 +212,15 @@ impl<A: Allocator> NoiseSuite<A> for Noise414<A> {
 
         // Generate mac key.
         let mut mac_key = SBuf::<A, u8>::new_zero(poly1305::KEY_SIZE);
-        try_ok_unit!(chacha.read(mac_key.as_mut_slice()));
+        try_ok_unit!(chacha.read(mac_key[mut]));
 
         // Authenticate fields.
         let mut tag = SBuf::<A, u8>::new_zero(self.mac_size());
-        try_ok_unit!(self.authenticate(ciphertext.slice_to(out_len), authtext,
-                                       &mac_key, tag.as_mut_slice()));
+        try_ok_unit!(self.authenticate(ciphertext[..out_len], authtext,
+                                       &mac_key, tag[mut]));
 
         // Validate tag.
-        if !utils::bytes_eq(ciphertext.slice_from(out_len), tag.as_slice()) {
+        if !utils::bytes_eq(ciphertext[out_len..], tag[]) {
             return Err(());
         }
 
@@ -230,18 +229,16 @@ impl<A: Allocator> NoiseSuite<A> for Noise414<A> {
         try_ok_unit!(chacha.skip(chacha20::BLOCK_SIZE - poly1305::KEY_SIZE));
 
         // Decrypt ciphertext.
-        try_ok_unit!(ciphertext.slice_to(out_len).decrypt(
-            &mut chacha, output.as_mut_slice()));
+        try_ok_unit!(ciphertext[..out_len].decrypt(&mut chacha, output[mut]));
         if pad {
             let mut pad_len: u32 = 0;
-            utils::u8to32_le(&mut pad_len, output.slice(out_len - u32::BYTES,
-                                                        out_len));
+            utils::u8to32_le(&mut pad_len,
+                             output[out_len - u32::BYTES..out_len]);
             if (pad_len + 4) as uint > out_len {
                 return Err(());
             }
-            output = SBuf::from_slice(output.slice_to(out_len -
-                                                      pad_len as uint -
-                                                      u32::BYTES));
+            output = SBuf::from_slice(output[..out_len - pad_len as uint -
+                                             u32::BYTES]);
         }
 
         // Update context.
@@ -293,11 +290,9 @@ impl<A: Allocator> Noise414<A> {
         try_ok_unit!(utils::pad16(ciphertext.len()).hash(&mut poly));
 
         let mut le_buf = SBuf::<A, u8>::new_zero(u64::BYTES * 2);
-        utils::u64to8_le(le_buf.slice_to_mut(u64::BYTES),
-                         &(authtext_len as u64));
-        utils::u64to8_le(le_buf.slice_from_mut(u64::BYTES),
-                         &(ciphertext.len() as u64));
-        try_ok_unit!(le_buf.as_slice().hash(&mut poly));
+        utils::u64to8_le(le_buf[mut ..u64::BYTES], &(authtext_len as u64));
+        utils::u64to8_le(le_buf[mut u64::BYTES..], &(ciphertext.len() as u64));
+        try_ok_unit!(le_buf[].hash(&mut poly));
 
         assert!(tag.len() == self.mac_size());
         Ok(try_ok_unit!(poly.tag(tag)))
@@ -311,7 +306,7 @@ impl<A: Allocator> Noise414<A> {
         });
 
         let mut chacha = try!(ChachaStream::new(&SBuf::<A, u8>::from_slice(key),
-                                                n.as_slice()));
+                                                n[]));
 
         // Discard first block.
         try_ok_unit!(chacha.skip(chacha20::BLOCK_SIZE));
@@ -375,8 +370,8 @@ impl<A: Allocator, T: NoiseSuite<A>> Blob<T, A> {
             (&Some(_), &Some(_)) => (),
             (_, _) => return Err(())
         }
-        self.suite.encrypt(self.key.as_mut().unwrap().as_mut_slice(),
-                           self.nonce.as_mut().unwrap().as_mut_slice(),
+        self.suite.encrypt(self.key.as_mut().unwrap()[mut],
+                           self.nonce.as_mut().unwrap()[mut],
                            contents, Some(pad_len), authtext)
     }
 
@@ -386,8 +381,8 @@ impl<A: Allocator, T: NoiseSuite<A>> Blob<T, A> {
             (&Some(_), &Some(_)) => (),
             (_, _) => return Err(())
         }
-        self.suite.decrypt(self.key.as_mut().unwrap().as_mut_slice(),
-                           self.nonce.as_mut().unwrap().as_mut_slice(),
+        self.suite.decrypt(self.key.as_mut().unwrap()[mut],
+                           self.nonce.as_mut().unwrap()[mut],
                            ciphertext, true, authtext)
     }
 }
@@ -462,30 +457,28 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
 
         // Info data.
         let mut info = SBuf::<A, u8>::new_zero(suite.name().len() + 1);
-        slice::bytes::copy_memory(info.as_mut_slice(), suite.name().as_slice());
+        slice::bytes::copy_memory(info[mut], suite.name()[]);
         let kdf_num_idx = info.len() - 1;
         info[kdf_num_idx] = kdf_val;
 
         // KDF1
         let mut kdf1 = SBuf::<A, u8>::new_zero(suite.cc_size() +
                                                suite.cv_size());
-        try_ok_unit!(self.suite.kdf(dh1.as_slice(), chain.as_slice(),
-                                    info.as_slice(), kdf1.as_mut_slice()));
+        try_ok_unit!(self.suite.kdf(dh1[], chain[], info[], kdf1[mut]));
 
         // KDF2
         let cv_idx = suite.cc_size();
         info[kdf_num_idx] += 1;
         let mut kdf2 = SBuf::<A, u8>::new_zero(suite.cc_size() +
                                                suite.cv_size());
-        try_ok_unit!(self.suite.kdf(dh2.as_slice(), kdf1.slice_from(cv_idx),
-                                    info.as_slice(), kdf2.as_mut_slice()));
+        try_ok_unit!(self.suite.kdf(dh2[], kdf1[cv_idx..], info[], kdf2[mut]));
 
         // Encrypt header.
         let nonce_idx = suite.key_size();
         let hdr_enc = {
             let (hdr_key, hdr_nonce) = kdf1.split_at_mut(nonce_idx);
             let mut hdr: Blob<T, A> = Blob::new();
-            hdr.set_context(hdr_key, hdr_nonce.slice_to(suite.nonce_size()));
+            hdr.set_context(hdr_key, hdr_nonce[mut ..suite.nonce_size()]);
             try_ok_unit!(hdr.seal(header_pad_len, sender_pubkey, authtext))
         };
 
@@ -493,20 +486,18 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
         let bdy_enc = {
             let (bdy_key, bdy_nonce) = kdf2.split_at_mut(nonce_idx);
             let bdy_add: SBuf<A, u8> = if authtext.is_some() {
-                SBuf::from_slices(&[*authtext.as_ref().unwrap(),
-                                    hdr_enc.as_slice()])
+                SBuf::from_slices(&[*authtext.as_ref().unwrap(), hdr_enc[]])
             } else {
-                SBuf::from_slice(hdr_enc.as_slice())
+                SBuf::from_slice(hdr_enc[])
             };
             let mut body: Blob<T, A> = Blob::new();
-            body.set_context(bdy_key, bdy_nonce.slice_to(suite.nonce_size()));
-            try_ok_unit!(body.seal(body_pad_len, contents,
-                                   Some(bdy_add.as_slice())))
+            body.set_context(bdy_key, bdy_nonce[mut ..suite.nonce_size()]);
+            try_ok_unit!(body.seal(body_pad_len, contents, Some(bdy_add[])))
         };
 
         // Assemble final result.
-        let boxed = SBuf::from_slices(&[hdr_enc.as_slice(), bdy_enc.as_slice()]);
-        let cv2 = SBuf::from_slice(kdf2.slice_from(cv_idx));
+        let boxed = SBuf::from_slices(&[hdr_enc[], bdy_enc[]]);
+        let cv2 = SBuf::from_slice(kdf2[cv_idx..]);
         Ok((boxed, cv2))
     }
 
@@ -548,23 +539,22 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
         // FIXME: handle cases where header_pad_len is different than 0, thus
         //        bdy_idx may be variable.
         let bdy_idx = suite.dh_size() + suite.mac_size() + u32::BYTES;
-        let hdr_enc = box_data.slice_to(bdy_idx);
-        let bdy_enc = box_data.slice_from(bdy_idx);
+        let hdr_enc = box_data[..bdy_idx];
+        let bdy_enc = box_data[bdy_idx..];
 
         // DH1
         let dh1 = try_ok_unit!(self.suite.dh(recvr_privkey, sender_eph_pubkey));
 
         // Info data.
         let mut info = SBuf::<A, u8>::new_zero(suite.name().len() + 1);
-        slice::bytes::copy_memory(info.as_mut_slice(), suite.name().as_slice());
+        slice::bytes::copy_memory(info[mut], suite.name()[]);
         let kdf_num_idx = info.len() - 1;
         info[kdf_num_idx] = kdf_val;
 
         // KDF1
         let mut kdf1 = SBuf::<A, u8>::new_zero(suite.cc_size() +
                                                suite.cv_size());
-        try_ok_unit!(self.suite.kdf(dh1.as_slice(), chain.as_slice(),
-                                    info.as_slice(), kdf1.as_mut_slice()));
+        try_ok_unit!(self.suite.kdf(dh1[], chain[], info[], kdf1[mut]));
 
         // Decrypt header
         let nonce_idx = suite.key_size();
@@ -572,20 +562,18 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
         let sender_pubkey = {
             let (hdr_key, hdr_nonce) = kdf1.split_at_mut(nonce_idx);
             let mut hdr: Blob<T, A> = Blob::new();
-            hdr.set_context(hdr_key, hdr_nonce.slice_to(suite.nonce_size()));
+            hdr.set_context(hdr_key, hdr_nonce[mut ..suite.nonce_size()]);
             try_ok_unit!(hdr.open(hdr_enc, authtext))
         };
 
         // DH2
-        let dh2 = try_ok_unit!(self.suite.dh(recvr_privkey,
-                                             sender_pubkey.as_slice()));
+        let dh2 = try_ok_unit!(self.suite.dh(recvr_privkey, sender_pubkey[]));
 
         // KDF2
         info[kdf_num_idx] += 1;
         let mut kdf2 = SBuf::<A, u8>::new_zero(suite.cc_size() +
                                                suite.cv_size());
-        try_ok_unit!(self.suite.kdf(dh2.as_slice(), kdf1.slice_from(cv_idx),
-                                    info.as_slice(), kdf2.as_mut_slice()));
+        try_ok_unit!(self.suite.kdf(dh2[], kdf1[cv_idx..], info[], kdf2[mut]));
 
         // Decrypt data.
         let bdy_dec = {
@@ -596,12 +584,12 @@ impl<A: Allocator, T: NoiseSuite<A>> Box<T, A> {
                 SBuf::from_slice(hdr_enc)
             };
             let mut body: Blob<T, A> = Blob::new();
-            body.set_context(bdy_key, bdy_nonce.slice_to(suite.nonce_size()));
-            try_ok_unit!(body.open(bdy_enc, Some(bdy_add.as_slice())))
+            body.set_context(bdy_key, bdy_nonce[mut ..suite.nonce_size()]);
+            try_ok_unit!(body.open(bdy_enc, Some(bdy_add[])))
         };
 
         // Assemble final result.
-        let cv2 = SBuf::from_slice(kdf2.slice_from(cv_idx));
+        let cv2 = SBuf::from_slice(kdf2[cv_idx..]);
         Ok((sender_pubkey, bdy_dec, cv2))
     }
 }
@@ -642,28 +630,28 @@ mod tests {
 
         let mut blob_enc: Blob<Noise414<DefaultAllocator>, DefaultAllocator> =
             Blob::new();
-        blob_enc.set_context(key.as_slice(), nonce.as_slice());
+        blob_enc.set_context(key[], nonce[]);
 
         let mut blob_dec: Blob<Noise414<DefaultAllocator>, DefaultAllocator> =
             Blob::new();
-        blob_dec.set_context(key.as_slice(), nonce.as_slice());
+        blob_dec.set_context(key[], nonce[]);
 
         // Input data.
         let mut input: Vec<u8> = Vec::from_elem(input_len, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
 
         // Authtext data.
         let mut authtext: Vec<u8> = Vec::from_elem(authtext_len, 0);
-        task_rng().fill_bytes(authtext.as_mut_slice());
+        task_rng().fill_bytes(authtext[mut]);
 
         let enc_data = blob_enc.seal(pad_len,
-                                     input.as_slice(),
-                                     Some(authtext.as_slice())).unwrap();
+                                     input[],
+                                     Some(authtext[])).unwrap();
 
-        let dec_data = blob_dec.open(enc_data.as_slice(),
-                                     Some(authtext.as_slice())).unwrap();
+        let dec_data = blob_dec.open(enc_data[],
+                                     Some(authtext[])).unwrap();
 
-        assert!(input.as_slice() == dec_data.as_slice());
+        assert!(input[] == dec_data[]);
         assert!(blob_enc.key == blob_dec.key);
         assert!(blob_enc.nonce == blob_dec.nonce);
     }
@@ -684,32 +672,32 @@ mod tests {
 
         // Input data.
         let mut input: Vec<u8> = Vec::from_elem(input_len, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
 
         // Authenticated additional data.
         let mut authtext: Vec<u8> = Vec::from_elem(authtext_len, 0);
-        task_rng().fill_bytes(authtext.as_mut_slice());
+        task_rng().fill_bytes(authtext[mut]);
 
-        let (box_data, cv1) = nbox.seal(eph_privkey.as_slice(),
-                                        sender_pubkey.as_slice(),
-                                        sender_privkey.as_slice(),
-                                        recvr_pubkey.as_slice(),
+        let (box_data, cv1) = nbox.seal(eph_privkey[],
+                                        sender_pubkey[],
+                                        sender_privkey[],
+                                        recvr_pubkey[],
                                         0, pad_len, // fixme: s/0/pad_len/
-                                        input.as_slice(),
-                                        Some(authtext.as_slice()),
+                                        input[],
+                                        Some(authtext[]),
                                         None,
                                         None).unwrap();
 
         let (sender_pubkey2, plaintext, cv2) =
-            nbox.open(recvr_privkey.as_slice(),
-                      eph_pubkey.as_slice(),
-                      box_data.as_slice(),
-                      Some(authtext.as_slice()),
+            nbox.open(recvr_privkey[],
+                      eph_pubkey[],
+                      box_data[],
+                      Some(authtext[]),
                       None,
                       None).unwrap();
 
-        assert!(sender_pubkey.as_slice() == sender_pubkey2.as_slice());
-        assert!(input.as_slice() == plaintext.as_slice());
-        assert!(cv1.as_slice() == cv2.as_slice());
+        assert!(sender_pubkey[] == sender_pubkey2[]);
+        assert!(input[] == plaintext[]);
+        assert!(cv1[] == cv2[]);
     }
 }

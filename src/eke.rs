@@ -229,11 +229,11 @@ impl<A: Allocator> Eke<A> {
 
         // Hash star fields into session key's state.
         if self.is_client() {
-            try_ok_unit!(self.sender_star.as_slice().hash(&mut self.sess_key));
+            try_ok_unit!(self.sender_star[].hash(&mut self.sess_key));
             try_ok_unit!(peer_star.hash(&mut self.sess_key));
         } else {
             try_ok_unit!(peer_star.hash(&mut self.sess_key));
-            try_ok_unit!(self.sender_star.as_slice().hash(&mut self.sess_key));
+            try_ok_unit!(self.sender_star[].hash(&mut self.sess_key));
         }
 
         // Hash initial secret into session key's state.
@@ -252,10 +252,10 @@ impl<A: Allocator> Eke<A> {
         let mut sk = self.sess_key.clone();
         let mut cm: SBuf<A, u8> = SBuf::new_zero(CONFIRMK_SIZE);
         if self.is_client() {
-            try_ok_unit!(sk.read(cm.as_mut_slice()));
+            try_ok_unit!(sk.read(cm[mut]));
         } else {
             try_ok_unit!(sk.skip(CONFIRMK_SIZE));
-            try_ok_unit!(sk.read(cm.as_mut_slice()));
+            try_ok_unit!(sk.read(cm[mut]));
         }
         Ok(cm)
     }
@@ -265,13 +265,13 @@ impl<A: Allocator> Eke<A> {
         let mut cm: SBuf<A, u8> = SBuf::new_zero(CONFIRMK_SIZE);
         if self.is_client() {
             try_ok_unit!(sk.skip(CONFIRMK_SIZE));
-            try_ok_unit!(sk.read(cm.as_mut_slice()));
+            try_ok_unit!(sk.read(cm[mut]));
         } else {
-            try_ok_unit!(sk.read(cm.as_mut_slice()));
+            try_ok_unit!(sk.read(cm[mut]));
         }
 
         // Check confirmation.
-        if !utils::bytes_eq(confirm, cm.as_slice()) {
+        if !utils::bytes_eq(confirm, cm[]) {
             return Err(());
         }
         Ok(())
@@ -288,8 +288,8 @@ impl<A: Allocator> Eke<A> {
             return Err(());
         }
 
-        try!(self.process_commit(msg.slice_to(curve41417::POINT_SIZE)));
-        try!(self.process_confirm(msg.slice_from(curve41417::POINT_SIZE)));
+        try!(self.process_commit(msg[..curve41417::POINT_SIZE]));
+        try!(self.process_confirm(msg[curve41417::POINT_SIZE..]));
         Ok(())
     }
 
@@ -305,7 +305,7 @@ impl<A: Allocator> Eke<A> {
         // Discard confirmation buffers.
         try_ok_unit!(s.skip(2 * CONFIRMK_SIZE));
         let mut sk: SBuf<A, u8> = SBuf::new_zero(size);
-        try_ok_unit!(s.read(sk.as_mut_slice()));
+        try_ok_unit!(s.read(sk[mut]));
         Ok(sk)
     }
 }
@@ -342,12 +342,12 @@ mod tests {
         // Client
         let mut pakec: eke::Eke<DefaultAllocator> =
             eke::Eke::new(eke::Client, Some(b"C"), Some(b"S"),
-                          password.as_slice()).ok().unwrap();
+                          password[]).ok().unwrap();
 
         // Server
         let mut pakes: eke::Eke<DefaultAllocator> =
             eke::Eke::new(eke::Server, Some(b"C"), Some(b"S"),
-                          password.as_slice()).ok().unwrap();
+                          password[]).ok().unwrap();
 
         // Stars messages exchange
         assert!(pakec.state as int == eke::ClientCommitSnd as int);
@@ -357,14 +357,14 @@ mod tests {
         let mc1 = pakec.get_msg().ok().unwrap();
         assert!(pakec.state as int == eke::ClientCommitConfirmRcv as int);
 
-        assert!(pakes.process_msg(mc1.as_slice()).is_ok());
+        assert!(pakes.process_msg(mc1[]).is_ok());
         assert!(pakes.state as int == eke::ServerCommitConfirmSnd as int);
 
         // S -> C: Y* || Confirm
         let ms1 = pakes.get_msg().ok().unwrap();
         assert!(pakes.state as int == eke::ServerConfirmRcv as int);
 
-        assert!(pakec.process_msg(ms1.as_slice()).is_ok());
+        assert!(pakec.process_msg(ms1[]).is_ok());
         assert!(pakec.state as int == eke::ClientConfirmSnd as int);
 
         // C -> S: Confirm
@@ -373,7 +373,7 @@ mod tests {
         assert!(pakec.is_done());
         assert!(pakec.status as int == eke::Success as int);
 
-        assert!(pakes.process_msg(mc2.as_slice()).is_ok());
+        assert!(pakes.process_msg(mc2[]).is_ok());
         assert!(pakes.state as int == eke::Done as int);
         assert!(pakes.is_done());
         assert!(pakes.status as int == eke::Success as int);
@@ -387,7 +387,7 @@ mod tests {
         // Sanity check
         assert!(pakec.get_msg().is_err());
         assert!(pakes.get_msg().is_err());
-        assert!(pakec.process_msg(ms1.as_slice()).is_err());
-        assert!(pakes.process_msg(mc2.as_slice()).is_err());
+        assert!(pakec.process_msg(ms1[]).is_err());
+        assert!(pakes.process_msg(mc2[]).is_err());
     }
 }

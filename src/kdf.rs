@@ -19,7 +19,7 @@ fn key_pack<A: Allocator>(key: &[u8], l: uint) -> Result<SBuf<A, u8>, ()> {
 
     let mut kp: SBuf<A, u8> = SBuf::new_zero(l / 8);
     kp[0] = (l / 8) as u8;
-    slice::bytes::copy_memory(kp.slice_from_mut(1), key);
+    slice::bytes::copy_memory(kp[mut 1..], key);
     kp[key.len() + 1] = 0x01;
     Ok(kp)
 }
@@ -54,7 +54,7 @@ impl<A: Allocator> XKdf<A> {
 
         // Key pack
         let l = (key.len() + 2) << 3;
-        try_ok_unit!(try!(key_pack::<A>(key, l)).as_slice().hash(&mut shake));
+        try_ok_unit!(try!(key_pack::<A>(key, l))[].hash(&mut shake));
 
         // Label || 0x00 || Context || size
         try_ok_unit!(label.hash(&mut shake));
@@ -64,9 +64,9 @@ impl<A: Allocator> XKdf<A> {
         }
         let size_bits = try_some_err!(size.checked_mul(&8));
         let mut size_bytes = SBuf::<A, u8>::new_zero(u32::BYTES);
-        utils::u32to8_le(size_bytes.as_mut_slice(),
+        utils::u32to8_le(size_bytes[mut],
                          &(try_some_err!(size_bits.to_u32())));
-        try_ok_unit!(size_bytes.as_slice().hash(&mut shake));
+        try_ok_unit!(size_bytes[].hash(&mut shake));
 
         Ok(XKdf {
             shake: shake,
@@ -79,13 +79,13 @@ impl<A: Allocator> XKdf<A> {
     /// number of bytes discarded.
     pub fn skip(&mut self, n: uint) -> IoResult<uint> {
         let mut s: SBuf<A, u8> = SBuf::new_zero(n);
-        self.read(s.as_mut_slice())
+        self.read(s[mut])
     }
 
     /// Return the derived key all-in-one read.
     pub fn derived_key(&mut self) -> Result<SBuf<A, u8>, IoError> {
         let mut dk = SBuf::<A, u8>::new_zero(self.size - self.pos);
-        try!(self.read(dk.as_mut_slice()));
+        try!(self.read(dk[mut]));
         Ok(dk)
     }
 }
@@ -105,7 +105,7 @@ impl<A: Allocator> Reader for XKdf<A> {
         let mut nread = try!(self.shake.read(buf));
         let left = self.size - self.pos;
         if nread > left {
-            utils::zero_memory(buf.slice_from_mut(left));
+            utils::zero_memory(buf[mut left..]);
             nread = left;
         }
 

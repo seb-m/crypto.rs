@@ -57,7 +57,7 @@ fn salsa20_word_to_byte<A: Allocator>(buf: &mut [u8],
 
     for i in range(0u, x.len()) {
         x[i] = x[i] + input[i];
-        utils::u32to8_le(buf.slice_mut(i * 4, (i + 1) * 4), &x[i]);
+        utils::u32to8_le(buf[mut i * 4..(i + 1) * 4], &x[i]);
     }
 }
 
@@ -91,14 +91,12 @@ impl<A: Allocator> ChachaRaw<A> {
 
             // Constant
             for i in range(0u, 4) {
-                utils::u8to32_le(input.get_mut(i),
-                                 SIGMA.slice(i * 4, (i + 1) * 4));
+                utils::u8to32_le(input.get_mut(i), SIGMA[i * 4..(i + 1) * 4]);
             }
 
             // Key
             for i in range(0u, 8) {
-                utils::u8to32_le(input.get_mut(4 + i),
-                                 key.slice(i * 4, (i + 1) * 4));
+                utils::u8to32_le(input.get_mut(4 + i), key[i * 4..(i + 1) * 4]);
             }
 
             // IV
@@ -107,7 +105,7 @@ impl<A: Allocator> ChachaRaw<A> {
             }
             for i in range(0u, nonce_len >> 2) {
                 utils::u8to32_le(input.get_mut(12 + s.ctr_words + i),
-                                 nonce.slice(i * 4, (i + 1) * 4));
+                                 nonce[i * 4..(i + 1) * 4]);
             }
         }
 
@@ -166,7 +164,7 @@ impl<A: Allocator> Reader for ChachaRaw<A> {
                 });
             }
 
-            let bufr = buf.slice_mut(pos, pos + BLOCK_SIZE);
+            let bufr = buf[mut pos..pos + BLOCK_SIZE];
             salsa20_word_to_byte(bufr, &self.input);
 
             len -= BLOCK_SIZE;
@@ -220,7 +218,7 @@ impl<A: Allocator> ChachaStream<A> {
         };
         let pos = self.pos;
         self.consume(nread);
-        Ok(self.buf.slice(pos, nread))
+        Ok(self.buf[pos..nread])
     }
 
     /// Read by reference a single byte. Return `Err` on end-of-stream.
@@ -236,7 +234,7 @@ impl<A: Allocator> ChachaStream<A> {
     /// `SBuf`buffer.
     pub fn encrypt_to_sbuf(&mut self, input: &[u8]) -> IoResult<SBuf<A, u8>> {
         let mut s: SBuf<A, u8> = SBuf::new_zero(input.len());
-        try!(self.encrypt(input, s.as_mut_slice()));
+        try!(self.encrypt(input, s[mut]));
         Ok(s)
     }
 
@@ -248,7 +246,7 @@ impl<A: Allocator> ChachaStream<A> {
     /// number of bytes discarded.
     pub fn skip(&mut self, n: uint) -> IoResult<uint> {
         let mut s: SBuf<A, u8> = SBuf::new_zero(n);
-        self.read(s.as_mut_slice())
+        self.read(s[mut])
     }
 }
 
@@ -271,10 +269,10 @@ impl<A: Allocator> CipherEncrypt for ChachaStream<A> {
 impl<A: Allocator> Buffer for ChachaStream<A> {
     fn fill_buf(&mut self) -> IoResult<&[u8]> {
         if self.pos == self.cap {
-            self.cap = try!(self.inner.read(self.buf.as_mut_slice()));
+            self.cap = try!(self.inner.read(self.buf[mut]));
             self.pos = 0;
         }
-        Ok(self.buf.slice(self.pos, self.cap))
+        Ok(self.buf[self.pos..self.cap])
     }
 
     fn consume(&mut self, amt: uint) {
@@ -291,8 +289,7 @@ impl<A: Allocator> Reader for ChachaStream<A> {
             let nread = {
                 let available = try!(self.fill_buf());
                 let nread = cmp::min(available.len(), buf.len() - pos);
-                slice::bytes::copy_memory(buf.slice_from_mut(pos),
-                                          available.slice_to(nread));
+                slice::bytes::copy_memory(buf[mut pos..], available[..nread]);
                 nread
             };
             self.consume(nread);
@@ -395,16 +392,16 @@ impl<A: Allocator> ChachaAead<A> {
             Some(data) => {
                 try_ok_unit!(data.hash(&mut poly));
                 try_ok_unit!(utils::pad16(data.len()).hash(&mut poly));
-                utils::u64to8_le(lens_enc.slice_to_mut(u64::BYTES),
+                utils::u64to8_le(lens_enc[mut ..u64::BYTES],
                                  &(data.len() as u64));
             },
             None => ()
         }
         try_ok_unit!(ciphertext.hash(&mut poly));
         try_ok_unit!(utils::pad16(ciphertext.len()).hash(&mut poly));
-        utils::u64to8_le(lens_enc.slice_from_mut(u64::BYTES),
+        utils::u64to8_le(lens_enc[mut u64::BYTES..],
                          &(ciphertext.len() as u64));
-        try_ok_unit!(lens_enc.as_slice().hash(&mut poly));
+        try_ok_unit!(lens_enc[].hash(&mut poly));
         try_ok_unit!(poly.tag(tag));
         Ok(())
     }
@@ -422,7 +419,7 @@ impl<A: Allocator> ChachaAead<A> {
         let mut chacha = try!(ChachaStream::new(&self.key, nonce));
 
         let mut mac_key = SBuf::<A, u8>::new_zero(poly1305::KEY_SIZE);
-        try_ok_unit!(chacha.read(mac_key.as_mut_slice()));
+        try_ok_unit!(chacha.read(mac_key[mut]));
 
         // Discard remaining bytes of the first block.
         assert!(poly1305::KEY_SIZE <= BLOCK_SIZE);
@@ -434,7 +431,7 @@ impl<A: Allocator> ChachaAead<A> {
 
         // Encrypt plaintext.
         try_ok_unit!(plaintext.encrypt(&mut chacha,
-                                       out.slice_from_mut(poly1305::TAG_SIZE)));
+                                       out[mut poly1305::TAG_SIZE..]));
 
         // Compute one-time authenticator.
         {
@@ -459,7 +456,7 @@ impl<A: Allocator> ChachaAead<A> {
         let mut chacha = try!(ChachaStream::new(&self.key, nonce));
 
         let mut mac_key = SBuf::<A, u8>::new_zero(poly1305::KEY_SIZE);
-        try_ok_unit!(chacha.read(mac_key.as_mut_slice()));
+        try_ok_unit!(chacha.read(mac_key[mut]));
 
         // Discard remaining bytes of the first block.
         assert!(poly1305::KEY_SIZE <= BLOCK_SIZE);
@@ -468,20 +465,19 @@ impl<A: Allocator> ChachaAead<A> {
         // Authenticate data.
         let mut tag = SBuf::<A, u8>::new_zero(poly1305::TAG_SIZE);
         try!(self.authenticator(&mac_key, aad,
-                                ciphertext.slice_from(poly1305::TAG_SIZE),
-                                tag.as_mut_slice()));
+                                ciphertext[poly1305::TAG_SIZE..],
+                                tag[mut]));
 
         // Check provided authenticator is valid.
-        if !utils::bytes_eq(ciphertext.slice_to(poly1305::TAG_SIZE),
-                            tag.as_slice()) {
+        if !utils::bytes_eq(ciphertext[..poly1305::TAG_SIZE], tag[]) {
             return Err(());
         }
 
         // Decrypt data.
         let mut plaintext = SBuf::<A, u8>::new_zero(ciphertext.len() -
                                                     poly1305::TAG_SIZE);
-        try_ok_unit!(ciphertext.slice_from(poly1305::TAG_SIZE).decrypt(
-            &mut chacha, plaintext.as_mut_slice()));
+        try_ok_unit!(ciphertext[poly1305::TAG_SIZE..].decrypt(&mut chacha,
+                                                              plaintext[mut]));
 
         Ok(plaintext)
     }
@@ -552,19 +548,19 @@ mod tests {
 
         for i in range(0, vectors.len()) {
             let k: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][0].from_hex().unwrap().as_slice());
+                vectors[i][0].from_hex().unwrap()[]);
             let v1 = vectors[i][1].from_hex().unwrap();
-            let n = v1.as_slice();
+            let n = v1[];
             let v2 = vectors[i][2].from_hex().unwrap();
-            let o = v2.as_slice();
+            let o = v2[];
             let mut c: Vec<u8> = Vec::from_elem(o.len(), 0);
 
             let mut s: ChachaStream<DefaultAllocator> =
                 ChachaStream::new(&k, n).unwrap();
-            let res = zeros.slice(0, o.len()).encrypt(&mut s, c.as_mut_slice());
+            let res = zeros[0..o.len()].encrypt(&mut s, c[mut]);
 
             assert!(res.is_ok() && res.ok().unwrap() == o.len());
-            assert!(o.as_slice() == c.as_slice());
+            assert!(o[] == c[]);
         }
     }
 
@@ -574,18 +570,16 @@ mod tests {
         let key: SBuf<DefaultAllocator, u8> = SBuf::new_rand(KEY_SIZE);
         let nonce: [u8, ..NONCE_SIZE] = [0, ..NONCE_SIZE];
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
         let mut out1: Vec<u8> = Vec::from_elem(size, 0);
         let mut out2: Vec<u8> = Vec::from_elem(size, 0);
 
-        let mut encrypter =
-            ChachaEncrypter::new(&key, nonce.as_slice()).unwrap();
-        let mut ret = encrypter.encrypt(&input, out1.as_mut_slice());
+        let mut encrypter = ChachaEncrypter::new(&key, nonce[]).unwrap();
+        let mut ret = encrypter.encrypt(&input, out1[mut]);
         assert!(ret.ok().unwrap() == size);
 
-        encrypter =
-            ChachaEncrypter::new(&key, nonce.as_slice()).unwrap();
-        ret = encrypter.decrypt(&out1, out2.as_mut_slice());
+        encrypter = ChachaEncrypter::new(&key, nonce[]).unwrap();
+        ret = encrypter.decrypt(&out1, out2[mut]);
         assert!(ret.ok().unwrap() == size);
 
         assert!(input == out2);
@@ -597,16 +591,14 @@ mod tests {
         let key: SBuf<DefaultAllocator, u8> = SBuf::new_rand(KEY_SIZE);
         let nonce: [u8, ..NONCE_SIZE] = [0, ..NONCE_SIZE];
         let mut input: Vec<u8> = Vec::from_elem(size, 0);
-        task_rng().fill_bytes(input.as_mut_slice());
+        task_rng().fill_bytes(input[mut]);
         let mut out1: Vec<u8> = Vec::from_elem(size, 0);
         let mut out2: Vec<u8> = Vec::from_elem(size, 0);
 
-        let mut ret = encrypt(&key, nonce.as_slice(), input.as_slice(),
-                              out1.as_mut_slice());
+        let mut ret = encrypt(&key, nonce[], input[], out1[mut]);
         assert!(ret.ok().unwrap() == size);
 
-        ret = decrypt(&key, nonce.as_slice(), out1.as_slice(),
-                      out2.as_mut_slice());
+        ret = decrypt(&key, nonce[], out1[], out2[mut]);
         assert!(ret.ok().unwrap() == size);
 
         assert!(input == out2);
@@ -645,27 +637,27 @@ mod tests {
 
         for i in range(0, vectors.len()) {
             let k: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][0].from_hex().unwrap().as_slice());
+                vectors[i][0].from_hex().unwrap()[]);
             let n: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][1].from_hex().unwrap().as_slice());
+                vectors[i][1].from_hex().unwrap()[]);
             let p1: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][2].from_hex().unwrap().as_slice());
+                vectors[i][2].from_hex().unwrap()[]);
             let c1: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][3].from_hex().unwrap().as_slice());
+                vectors[i][3].from_hex().unwrap()[]);
             let b: uint = num::from_str_radix(vectors[i][4], 10).unwrap();
 
             // Encrypt.
-            let mut chacha = ChachaStream::new(&k, n.as_slice()).unwrap();
+            let mut chacha = ChachaStream::new(&k, n[]).unwrap();
             chacha.skip(b * BLOCK_SIZE).unwrap();
             let mut c2: SBuf<DefaultAllocator, u8> = SBuf::new_zero(p1.len());
-            chacha.encrypt(p1.as_slice(), c2.as_mut_slice()).unwrap();
+            chacha.encrypt(p1[], c2[mut]).unwrap();
             assert!(c1 == c2);
 
             // Decrypt.
-            let mut chacha = ChachaStream::new(&k, n.as_slice()).unwrap();
+            let mut chacha = ChachaStream::new(&k, n[]).unwrap();
             chacha.skip(b * BLOCK_SIZE).unwrap();
             let mut p2: SBuf<DefaultAllocator, u8> = SBuf::new_zero(p1.len());
-            chacha.decrypt(c2.as_slice(), p2.as_mut_slice()).unwrap();
+            chacha.decrypt(c2[], p2[mut]).unwrap();
             assert!(p1 == p2);
         }
     }
@@ -678,18 +670,18 @@ mod tests {
         let mut ks1: Vec<u8> = Vec::from_elem(size, 0);
 
         // One chunk
-        let mut stream = ChachaStream::new(&key, nonce.as_slice()).unwrap();
-        let ret = stream.read(ks1.as_mut_slice());
+        let mut stream = ChachaStream::new(&key, nonce[]).unwrap();
+        let ret = stream.read(ks1[mut]);
         assert!(ret.ok().unwrap() == size);
 
         // Multiple chunks
         let mut old_pos = 0u;
         let mut pos = 0u;
-        stream = ChachaStream::new(&key, nonce.as_slice()).unwrap();
+        stream = ChachaStream::new(&key, nonce[]).unwrap();
         let mut ks2: Vec<u8> = Vec::from_elem(size, 0);
         while pos < size {
             pos = task_rng().gen_range(pos, size + 1);
-            assert!(stream.read(ks2.slice_mut(old_pos, pos)).is_ok());
+            assert!(stream.read(ks2[mut old_pos..pos]).is_ok());
             old_pos = pos;
         }
 
@@ -705,13 +697,13 @@ mod tests {
         let mut ks2: Vec<u8> = Vec::from_elem(size, 0);
 
         let n1: [u8, ..NONCE_SIZE] = [0, ..NONCE_SIZE];
-        let mut s1 = ChachaStream::new(&key, n1.as_slice()).unwrap();
-        let mut ret = s1.read(ks1.as_mut_slice());
+        let mut s1 = ChachaStream::new(&key, n1[]).unwrap();
+        let mut ret = s1.read(ks1[mut]);
         assert!(ret.ok().unwrap() == size);
 
         let n2: [u8, ..NONCE_AEAD_SIZE] = [0, ..NONCE_AEAD_SIZE];
-        let mut s2 = ChachaStream::new(&key, n2.as_slice()).unwrap();
-        ret = s2.read(ks2.as_mut_slice());
+        let mut s2 = ChachaStream::new(&key, n2[]).unwrap();
+        ret = s2.read(ks2[mut]);
         assert!(ret.ok().unwrap() == size);
 
         assert!(ks1 == ks2);
@@ -733,13 +725,11 @@ mod tests {
         let aead = ChachaAead::new(&key).unwrap();
 
         // Encrypt.
-        let ct = aead.seal(nonce.as_slice(), pt.as_slice(),
-                           Some(aad.as_slice())).unwrap();
+        let ct = aead.seal(nonce[], pt[], Some(aad[])).unwrap();
         assert!(ct.len() == pt.len() + poly1305::TAG_SIZE);
 
         // Decrypt.
-        let pt_dec = aead.open(nonce.as_slice(), ct.as_slice(),
-                               Some(aad.as_slice())).unwrap();
+        let pt_dec = aead.open(nonce[], ct[], Some(aad[])).unwrap();
         assert!(pt == pt_dec);
     }
 
@@ -771,27 +761,25 @@ mod tests {
 
         for i in range(0, vectors.len()) {
             let k: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][0].from_hex().unwrap().as_slice());
+                vectors[i][0].from_hex().unwrap()[]);
             let n: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][1].from_hex().unwrap().as_slice());
+                vectors[i][1].from_hex().unwrap()[]);
             let a: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][2].from_hex().unwrap().as_slice());
+                vectors[i][2].from_hex().unwrap()[]);
             let p1: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][3].from_hex().unwrap().as_slice());
+                vectors[i][3].from_hex().unwrap()[]);
             let c1: SBuf<DefaultAllocator, u8> = SBuf::from_bytes(
-                vectors[i][4].from_hex().unwrap().as_slice());
+                vectors[i][4].from_hex().unwrap()[]);
 
             let aead = ChachaAead::new(&k).unwrap();
 
             // Encrypt.
-            let c2 = aead.seal(n.as_slice(), p1.as_slice(),
-                               Some(a.as_slice())).unwrap();
+            let c2 = aead.seal(n[], p1[], Some(a[])).unwrap();
             assert!(c2.len() == p1.len() + poly1305::TAG_SIZE);
             assert!(c1 == c2);
 
             // Decrypt.
-            let p2 = aead.open(n.as_slice(), c2.as_slice(),
-                               Some(a.as_slice())).unwrap();
+            let p2 = aead.open(n[], c2[], Some(a[])).unwrap();
             assert!(p1 == p2);
         }
     }
@@ -803,10 +791,10 @@ mod tests {
         let key: SBuf<DefaultAllocator, u8> = SBuf::new_rand(KEY_SIZE);
         let nonce: [u8, ..NONCE_SIZE] = [0, ..NONCE_SIZE];
         let mut ks: Vec<u8> = Vec::from_elem(size, 0);
-        let mut stream = ChachaStream::new(&key, nonce.as_slice()).unwrap();
+        let mut stream = ChachaStream::new(&key, nonce[]).unwrap();
 
         b.iter(|| {
-            stream.read(ks.as_mut_slice());
+            stream.read(ks[mut]);
         })
     }
 }

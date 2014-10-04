@@ -11,14 +11,14 @@ use hash::{Hash, Authenticator};
 pub static KEY_SIZE: uint = 32;
 pub static TAG_SIZE: uint = 16;
 
-static trail: [u8, ..17] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+static TRAIL: [u8, ..17] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 
 fn add<A: Allocator>(s: &mut SBuf<A, u32>, c: &[u8]) {
     assert!(s.len() == 17 && c.len() <= 17);
     let mut u: u32 = 0;
 
-    for (its, itc) in s.iter_mut().zip(c.iter().chain(trail.iter())) {
+    for (its, itc) in s.iter_mut().zip(c.iter().chain(TRAIL.iter())) {
         u += *its + *itc as u32;
         *its = u & 0xff;
         u >>= 8;
@@ -46,7 +46,7 @@ fn squeeze<A: Allocator>(s: &mut SBuf<A, u32>) {
     s[16] = u;
 }
 
-static minusp: [u8, ..17] = [
+static MINUSP: [u8, ..17] = [
     5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 252
 ];
 
@@ -56,7 +56,7 @@ fn freeze<A: Allocator>(s: &mut SBuf<A, u32>) {
     let sorig = s.clone();
     let mut negative: u32;
 
-    add(s, minusp);
+    add(s, MINUSP);
     negative = -((*s)[16] >> 7);
     for i in range(0u, 17) {
         s[i] ^= negative & (sorig[i] ^ (*s)[i]);

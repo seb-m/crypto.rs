@@ -10,6 +10,7 @@
 #![feature(macro_rules)]
 #![feature(unsafe_destructor)]
 #![feature(default_type_params)]
+#![feature(slicing_syntax)]
 #![feature(phase)]
 
 #[cfg(test)] extern crate test;

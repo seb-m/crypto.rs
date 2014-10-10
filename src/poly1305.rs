@@ -8,10 +8,10 @@ use common::sbuf::{Allocator, DefaultAllocator, SBuf};
 use hash::{Hash, Authenticator};
 
 
-pub static KEY_SIZE: uint = 32;
-pub static TAG_SIZE: uint = 16;
+pub const KEY_SIZE: uint = 32;
+pub const TAG_SIZE: uint = 16;
 
-static TRAIL: [u8, ..17] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+const TRAIL: [u8, ..17] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
 
 fn add<A: Allocator>(s: &mut SBuf<A, u32>, c: &[u8]) {
@@ -46,7 +46,7 @@ fn squeeze<A: Allocator>(s: &mut SBuf<A, u32>) {
     s[16] = u;
 }
 
-static MINUSP: [u8, ..17] = [
+const MINUSP: [u8, ..17] = [
     5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 252
 ];
 

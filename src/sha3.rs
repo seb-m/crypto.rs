@@ -10,9 +10,9 @@ use common::utils;
 use hash::{Hash, Hasher};
 
 
-static B: uint = 200;
-static NROUNDS: uint = 24;
-static RC: [u64, ..24] = [
+const B: uint = 200;
+const NROUNDS: uint = 24;
+const RC: [u64, ..24] = [
     0x0000000000000001,
     0x0000000000008082,
     0x800000000000808a,
@@ -38,17 +38,17 @@ static RC: [u64, ..24] = [
     0x0000000080000001,
     0x8000000080008008
 ];
-static ROTC: [uint, ..24] = [
+const ROTC: [uint, ..24] = [
     1, 3, 6, 10, 15, 21, 28, 36,
     45, 55, 2, 14, 27, 41, 56, 8,
     25, 43, 62, 18, 39, 61, 20, 44
 ];
-static PIL: [uint, ..24] = [
+const PIL: [uint, ..24] = [
     10, 7, 11, 17, 18, 3, 5, 16,
     8, 21, 24, 4, 15, 23, 19, 13,
     12, 2, 20, 14, 22, 9, 6, 1
 ];
-static M5: [uint, ..10] = [
+const M5: [uint, ..10] = [
     0, 1, 2, 3, 4, 0, 1, 2, 3, 4
 ];
 

@@ -18,7 +18,7 @@ use hash::Hash;
 use sha3::{Sha3, Sha3_512, Shake256};
 
 
-static CONFIRMK_SIZE: uint = 64;
+const CONFIRMK_SIZE: uint = 64;
 
 
 macro_rules! try_ongoing(

@@ -12,13 +12,13 @@ use hash::Hash;
 use poly1305;
 
 
-pub static KEY_SIZE: uint = 32;
-pub static NONCE_SIZE: uint = 8;
-pub static NONCE_AEAD_SIZE: uint = 12;
-pub static BLOCK_SIZE: uint = 64;
+pub const KEY_SIZE: uint = 32;
+pub const NONCE_SIZE: uint = 8;
+pub const NONCE_AEAD_SIZE: uint = 12;
+pub const BLOCK_SIZE: uint = 64;
 
-static BUFFER_SIZE: uint = BLOCK_SIZE * 16;  // FIXME: maybe too short.
-static SIGMA: &'static [u8] = b"expand 32-byte k";
+const BUFFER_SIZE: uint = BLOCK_SIZE * 16;  // FIXME: maybe too short.
+const SIGMA: &'static [u8] = b"expand 32-byte k";
 
 
 macro_rules! rotl32(($v:expr, $n:expr) => (

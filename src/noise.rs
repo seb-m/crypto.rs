@@ -24,7 +24,7 @@ use sha3::Shake256;
 
 
 // Cipher suite name.
-static NOISE414: &'static [u8] = b"Curv41417-Chacha20-Shake";
+const NOISE414: &'static [u8] = b"Curv41417-Chacha20-Shake";
 
 
 /// Noise cipher suite

@@ -9,17 +9,14 @@ use std::{u32, u64};
 
 use common::sbuf::{Allocator, DefaultAllocator, SBuf};
 use common::utils;
-use curve41417;
 use curve41417::bytes::{Bytes, Scalar, MontPoint};
-use curve41417::mont;
+use curve41417::{mod, mont};
 
-use chacha20;
-use chacha20::ChachaStream;
+use chacha20::{mod, ChachaStream};
 use encrypt::{Encrypt, CipherEncrypt};
 use hash::Hash;
 use kdf::XKdf;
-use poly1305;
-use poly1305::Poly1305;
+use poly1305::{mod, Poly1305};
 use sha3::Shake256;
 
 
@@ -609,8 +606,7 @@ mod tests {
 
     use common::sbuf::{DefaultAllocator, SBuf};
 
-    use noise;
-    use noise::{NoiseSuite, Noise414, Blob};
+    use noise::{mod, NoiseSuite, Noise414, Blob};
 
 
     #[test]

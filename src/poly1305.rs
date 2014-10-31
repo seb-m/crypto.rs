@@ -50,7 +50,7 @@ const MINUSP: [u8, ..17] = [
     5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 252
 ];
 
-#[allow(unsigned_negate)]
+#[allow(unsigned_negation)]
 fn freeze<A: Allocator>(s: &mut SBuf<A, u32>) {
     assert!(s.len() == 17);
     let sorig = s.clone();

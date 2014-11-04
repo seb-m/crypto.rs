@@ -41,7 +41,7 @@ impl<S: Writer> Hash<S> for CString {
     }
 }
 
-impl<A: Allocator, S, T: Hash<S>> Hash<S> for SBuf<A, T> {
+impl<A: Allocator, S, T: Hash<S> + Copy> Hash<S> for SBuf<A, T> {
     fn hash(&self, state: &mut S) -> IoResult<()> {
         for it in self.iter() {
             try!(it.hash(state));

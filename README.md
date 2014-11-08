@@ -2,7 +2,7 @@
 
 ## Description
 
-A selection of crypto primitives implemented in pure-[Rust](http://www.rust-lang.org/).
+A selection of crypto primitives implemented in pure-[Rust](http://www.rust-lang.org/). This code is experimental, don't use it for anything real.
 
 
 ## Crypto primitives

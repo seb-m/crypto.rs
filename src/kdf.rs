@@ -1,6 +1,7 @@
 //! Key Derivation Function
 
 use std::io::{Reader, IoResult, IoError, EndOfFile};
+use std::num::Int;
 use std::slice;
 use std::u32;
 
@@ -62,7 +63,7 @@ impl<A: Allocator> XKdf<A> {
         if context.is_some() {
             try_ok_unit!(context.unwrap().hash(&mut shake));
         }
-        let size_bits = try_some_err!(size.checked_mul(&8));
+        let size_bits = try_some_err!(size.checked_mul(8));
         let mut size_bytes = SBuf::<A, u8>::new_zero(u32::BYTES);
         utils::u32to8_le(size_bytes[mut],
                          &(try_some_err!(size_bits.to_u32())));

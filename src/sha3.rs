@@ -3,6 +3,7 @@
 use std::cmp;
 use std::io::{Reader, Writer, IoResult, IoError, EndOfFile, OtherIoError};
 use std::iter;
+use std::num::Float;
 
 use common::sbuf::{Allocator, DefaultAllocator, SBuf};
 use common::utils;

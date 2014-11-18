@@ -17,7 +17,7 @@ use encrypt::{Encrypt, CipherEncrypt};
 use hash::Hash;
 use kdf::XKdf;
 use poly1305::{mod, Poly1305};
-use sha3::Shake256;
+use sha3::Sha3Mode::Shake256;
 
 
 // Cipher suite name.

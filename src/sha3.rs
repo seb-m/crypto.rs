@@ -9,6 +9,7 @@ use common::sbuf::{Allocator, DefaultAllocator, SBuf};
 use common::utils;
 
 use hash::{Hash, Hasher};
+use self::Sha3Mode::*;
 
 
 const B: uint = 200;
@@ -460,8 +461,8 @@ mod tests {
     use common::sbuf::DefaultAllocator;
 
     use hash::{Hash, Hasher};
-    use sha3::{Sha3Mode, Sha3_224, Sha3_256, Sha3_384, Sha3_512,
-               Shake128, Shake256, Sha3Hasher, Sha3, hash};
+    use sha3::{Sha3Mode, Sha3Hasher, Sha3, hash};
+    use sha3::Sha3Mode::*;
 
 
     #[test]

@@ -15,7 +15,10 @@ use curve41417::bytes::{Bytes, B512, Scalar, EdPoint};
 use curve41417::ed::GroupElem;
 
 use hash::Hash;
-use sha3::{Sha3, Sha3_512, Shake256};
+use self::Role::*;
+use self::State::*;
+use self::Status::*;
+use sha3::{Sha3, Sha3Mode};
 
 
 const CONFIRMK_SIZE: uint = 64;
@@ -87,14 +90,14 @@ impl<A: Allocator> Eke<A> {
                server_info: Option<&[u8]>,
                secret: &[u8]) -> Result<Eke<A>, ()> {
         // Hash secret.
-        let mut state: Sha3<A> = Sha3::new(Sha3_512);
+        let mut state: Sha3<A> = Sha3::new(Sha3Mode::Sha3_512);
         try_ok_unit!(secret.hash(&mut state));
         let mut key: B512<A> = Bytes::new_zero();
         assert!(state.digest_length() == key.len());
         try_ok_unit!(state.read(key.as_mut_bytes()));
 
         // Hash infos into session key's state.
-        let mut sk: Sha3<A> = Sha3::new(Shake256);
+        let mut sk: Sha3<A> = Sha3::new(Sha3Mode::Shake256);
         if client_info.is_some() {
             try_ok_unit!(client_info.as_ref().unwrap().hash(&mut sk));
         }
@@ -329,7 +332,7 @@ impl<A: Allocator> Clone for Eke<A> {
 mod tests {
     use common::sbuf::{DefaultAllocator, SBuf};
 
-    use eke;
+    use eke::{mod, Role, State, Status};
 
 
     #[test]
@@ -341,42 +344,42 @@ mod tests {
 
         // Client
         let mut pakec: eke::Eke<DefaultAllocator> =
-            eke::Eke::new(eke::Client, Some(b"C"), Some(b"S"),
+            eke::Eke::new(Role::Client, Some(b"C"), Some(b"S"),
                           password[]).ok().unwrap();
 
         // Server
         let mut pakes: eke::Eke<DefaultAllocator> =
-            eke::Eke::new(eke::Server, Some(b"C"), Some(b"S"),
+            eke::Eke::new(Role::Server, Some(b"C"), Some(b"S"),
                           password[]).ok().unwrap();
 
         // Stars messages exchange
-        assert!(pakec.state as int == eke::ClientCommitSnd as int);
-        assert!(pakes.state as int == eke::ServerCommitRcv as int);
+        assert!(pakec.state as int == State::ClientCommitSnd as int);
+        assert!(pakes.state as int == State::ServerCommitRcv as int);
 
         // C -> S: X*
         let mc1 = pakec.get_msg().ok().unwrap();
-        assert!(pakec.state as int == eke::ClientCommitConfirmRcv as int);
+        assert!(pakec.state as int == State::ClientCommitConfirmRcv as int);
 
         assert!(pakes.process_msg(mc1[]).is_ok());
-        assert!(pakes.state as int == eke::ServerCommitConfirmSnd as int);
+        assert!(pakes.state as int == State::ServerCommitConfirmSnd as int);
 
         // S -> C: Y* || Confirm
         let ms1 = pakes.get_msg().ok().unwrap();
-        assert!(pakes.state as int == eke::ServerConfirmRcv as int);
+        assert!(pakes.state as int == State::ServerConfirmRcv as int);
 
         assert!(pakec.process_msg(ms1[]).is_ok());
-        assert!(pakec.state as int == eke::ClientConfirmSnd as int);
+        assert!(pakec.state as int == State::ClientConfirmSnd as int);
 
         // C -> S: Confirm
         let mc2 = pakec.get_msg().ok().unwrap();
-        assert!(pakec.state as int == eke::Done as int);
+        assert!(pakec.state as int == State::Done as int);
         assert!(pakec.is_done());
-        assert!(pakec.status as int == eke::Success as int);
+        assert!(pakec.status as int == Status::Success as int);
 
         assert!(pakes.process_msg(mc2[]).is_ok());
-        assert!(pakes.state as int == eke::Done as int);
+        assert!(pakes.state as int == State::Done as int);
         assert!(pakes.is_done());
-        assert!(pakes.status as int == eke::Success as int);
+        assert!(pakes.status as int == Status::Success as int);
 
         // Check session key
         let skc = pakec.session_key(session_key_size).ok().unwrap();

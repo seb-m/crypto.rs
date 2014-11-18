@@ -12,6 +12,7 @@
 #![feature(default_type_params)]
 #![feature(slicing_syntax)]
 #![feature(phase)]
+#![feature(globs)]
 
 #[cfg(test)] extern crate test;
 #[cfg(test)] #[phase(plugin, link)] extern crate log;

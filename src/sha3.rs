@@ -475,7 +475,7 @@ mod tests {
                      (Shake256, "shake256_test_vectors.txt")];
 
         let mut count: uint = 0;
-        let mut vectors_dir = os::getcwd();
+        let mut vectors_dir = os::getcwd().unwrap();
         loop {
             let cargo_file = vectors_dir.join("Cargo.toml");
             if cargo_file.exists() {

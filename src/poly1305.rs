@@ -56,7 +56,7 @@ fn freeze<A: Allocator>(s: &mut SBuf<A, u32>) {
     let sorig = s.clone();
     let mut negative: u32;
 
-    add(s, MINUSP);
+    add(s, &MINUSP);
     negative = -((*s)[16] >> 7);
     for i in range(0u, 17) {
         s[i] ^= negative & (sorig[i] ^ (*s)[i]);

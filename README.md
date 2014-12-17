@@ -1,5 +1,9 @@
 # Rust Crypto Primitives
 
+## Update 12/17/2014
+
+Code is currently broken, it should be updated and refactored to use [TARS](https://github.com/seb-m/tars) and the latest Rust awesomeness.
+
 ## Description
 
 A selection of crypto primitives implemented in pure-[Rust](http://www.rust-lang.org/). This code is experimental, don't use it for anything real.

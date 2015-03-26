@@ -40,7 +40,7 @@ $ cargo doc   # Build documentation under target/doc/
 
 ## Documentation
 
-The generated documentation is also available [here](http://seb.dbzteam.org/crypto.rs/crypto/).
+The generated documentation is also available [here](http://www.rust-ci.org/seb-m/crypto.rs/doc/crypto/).
 
 
 ## License
